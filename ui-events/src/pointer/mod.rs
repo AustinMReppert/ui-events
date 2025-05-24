@@ -210,7 +210,7 @@ pub struct PointerButtonUpdate {
 impl PointerButtonUpdate {
     /// Returns `true` if the underlying pointer is the primary pointer.
     #[inline(always)]
-    pub fn is_primary_pointer(&self) -> bool {
+    pub fn is_primary(&self) -> bool {
         self.pointer.is_primary_pointer()
     }
 }

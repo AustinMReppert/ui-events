@@ -67,12 +67,12 @@ impl ApplicationHandler for Simple {
                 UiEvent::Keyboard(_) => {}
                 UiEvent::Pointer(pointer_event) => match pointer_event {
                     PointerEvent::Down(pointer_button_update) => {
-                        if pointer_button_update.is_primary_pointer() {
+                        if pointer_button_update.is_primary() {
                             info!("Pointer down: {:?}", pointer_button_update);
                         }
                     }
                     PointerEvent::Up(pointer_button_update) => {
-                        if pointer_button_update.is_primary_pointer() {
+                        if pointer_button_update.is_primary() {
                             info!("Pointer up: {:?}", pointer_button_update);
                         }
                     }
