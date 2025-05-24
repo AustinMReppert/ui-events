@@ -276,7 +276,7 @@ pub enum PointerEvent {
 impl PointerEvent {
     /// Returns `true` if this event is for the primary pointer.
     #[inline(always)]
-    pub fn is_primary_pointer(&self) -> bool {
+    pub fn is_primary(&self) -> bool {
         match self {
             Self::Down(PointerButtonUpdate { pointer, .. })
             | Self::Up(PointerButtonUpdate { pointer, .. })
