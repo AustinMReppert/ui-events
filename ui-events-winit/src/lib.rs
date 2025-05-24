@@ -29,7 +29,11 @@ use alloc::{vec, vec::Vec};
 extern crate std;
 use std::time::Instant;
 
-use ui_events::{pointer::{PointerEvent, PointerId, PointerInfo, PointerState, PointerType, PointerUpdate}, ScrollDelta, UiEvent};
+use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate};
+use ui_events::{
+    pointer::{PointerEvent, PointerId, PointerInfo, PointerState, PointerType, PointerUpdate},
+    ScrollDelta, UiEvent,
+};
 use winit::{
     event::{ElementState, Force, MouseScrollDelta, Touch, TouchPhase, WindowEvent},
     keyboard::ModifiersState,
@@ -88,12 +92,12 @@ impl WindowEventReducer {
             WindowEvent::KeyboardInput { event, .. } => Some(UiEvent::Keyboard(
                 keyboard::from_winit_keyboard_event(event.clone(), self.modifiers),
             )),
-            WindowEvent::CursorEntered { .. } => Some(UiEvent::Pointer(
-                PointerEvent::Enter(PRIMARY_MOUSE),
-            )),
-            WindowEvent::CursorLeft { .. } => Some(UiEvent::Pointer(
-                PointerEvent::Leave(PRIMARY_MOUSE),
-            )),
+            WindowEvent::CursorEntered { .. } => {
+                Some(UiEvent::Pointer(PointerEvent::Enter(PRIMARY_MOUSE)))
+            }
+            WindowEvent::CursorLeft { .. } => {
+                Some(UiEvent::Pointer(PointerEvent::Leave(PRIMARY_MOUSE)))
+            }
             WindowEvent::CursorMoved { position, .. } => {
                 self.primary_state.position = *position;
 
@@ -117,11 +121,11 @@ impl WindowEventReducer {
                 }
 
                 Some(UiEvent::Pointer(self.counter.attach_count(
-                    PointerEvent::Down {
+                    PointerEvent::Down(PointerButtonUpdate {
                         pointer: PRIMARY_MOUSE,
                         button,
                         state: self.primary_state.clone(),
-                    },
+                    }),
                 )))
             }
             WindowEvent::MouseInput {
@@ -135,23 +139,21 @@ impl WindowEventReducer {
                 }
 
                 Some(UiEvent::Pointer(self.counter.attach_count(
-                    PointerEvent::Up {
+                    PointerEvent::Up(PointerButtonUpdate {
                         pointer: PRIMARY_MOUSE,
                         button,
                         state: self.primary_state.clone(),
-                    },
+                    }),
                 )))
             }
-            WindowEvent::MouseWheel { delta, .. } => {
-                Some(UiEvent::Pointer(PointerEvent::Scroll {
-                    pointer: PRIMARY_MOUSE,
-                    delta: match *delta {
-                        MouseScrollDelta::LineDelta(x, y) => ScrollDelta::LineDelta(x, y),
-                        MouseScrollDelta::PixelDelta(p) => ScrollDelta::PixelDelta(p),
-                    },
-                    state: self.primary_state.clone(),
-                }))
-            }
+            WindowEvent::MouseWheel { delta, .. } => Some(UiEvent::Pointer(PointerEvent::Scroll(PointerScrollUpdate {
+                pointer: PRIMARY_MOUSE,
+                delta: match *delta {
+                    MouseScrollDelta::LineDelta(x, y) => ScrollDelta::LineDelta(x, y),
+                    MouseScrollDelta::PixelDelta(p) => ScrollDelta::PixelDelta(p),
+                },
+                state: self.primary_state.clone(),
+            }))),
             WindowEvent::Touch(Touch {
                 phase,
                 id,
@@ -183,27 +185,25 @@ impl WindowEventReducer {
                     ..Default::default()
                 };
 
-                Some(UiEvent::Pointer(self.counter.attach_count(
-                    match phase {
-                        Started => PointerEvent::Down {
-                            pointer,
-                            button: None,
-                            state,
-                        },
-                        Moved => PointerEvent::Move(PointerUpdate {
-                            pointer,
-                            current: state,
-                            coalesced: vec![],
-                            predicted: vec![],
-                        }),
-                        Cancelled => PointerEvent::Cancel(pointer),
-                        Ended => PointerEvent::Up {
-                            pointer,
-                            button: None,
-                            state,
-                        },
-                    },
-                )))
+                Some(UiEvent::Pointer(self.counter.attach_count(match phase {
+                    Started => PointerEvent::Down(PointerButtonUpdate {
+                        pointer,
+                        button: None,
+                        state,
+                    }),
+                    Moved => PointerEvent::Move(PointerUpdate {
+                        pointer,
+                        current: state,
+                        coalesced: vec![],
+                        predicted: vec![],
+                    }),
+                    Cancelled => PointerEvent::Cancel(pointer),
+                    Ended => PointerEvent::Up(PointerButtonUpdate {
+                        pointer,
+                        button: None,
+                        state,
+                    }),
+                })))
             }
             _ => None,
         }
@@ -237,68 +237,65 @@ impl TapCounter {
     /// Enhance a [`PointerEvent`] with a `count`.
     fn attach_count(&mut self, e: PointerEvent) -> PointerEvent {
         match e {
-            PointerEvent::Down {
-                button,
-                pointer,
-                state,
-            } => {
+            PointerEvent::Down(pointer_button_update) => {
                 let e = if let Some(i) =
                     self.taps.iter().position(|TapState { x, y, up_time, .. }| {
-                        let dx = (x - state.position.x).abs();
-                        let dy = (y - state.position.y).abs();
-                        (dx * dx + dy * dy).sqrt() < 4.0 && (up_time + 500_000_000) > state.time
+                        let dx = (x - pointer_button_update.state.position.x).abs();
+                        let dy = (y - pointer_button_update.state.position.y).abs();
+                        (dx * dx + dy * dy).sqrt() < 4.0
+                            && (up_time + 500_000_000) > pointer_button_update.state.time
                     }) {
                     let count = self.taps[i].count + 1;
                     self.taps[i].count = count;
-                    self.taps[i].pointer_id = pointer.pointer_id;
-                    self.taps[i].down_time = state.time;
-                    self.taps[i].up_time = state.time;
-                    self.taps[i].x = state.position.x;
-                    self.taps[i].y = state.position.y;
+                    self.taps[i].pointer_id = pointer_button_update.pointer.pointer_id;
+                    self.taps[i].down_time = pointer_button_update.state.time;
+                    self.taps[i].up_time = pointer_button_update.state.time;
+                    self.taps[i].x = pointer_button_update.state.position.x;
+                    self.taps[i].y = pointer_button_update.state.position.y;
 
-                    PointerEvent::Down {
-                        button,
-                        pointer,
-                        state: PointerState { count, ..state },
-                    }
+                    PointerEvent::Down(PointerButtonUpdate {
+                        button: pointer_button_update.button,
+                        pointer: pointer_button_update.pointer,
+                        state: PointerState {
+                            count,
+                            ..pointer_button_update.state
+                        },
+                    })
                 } else {
                     let s = TapState {
-                        pointer_id: pointer.pointer_id,
-                        down_time: state.time,
-                        up_time: state.time,
+                        pointer_id: pointer_button_update.pointer.pointer_id,
+                        down_time: pointer_button_update.state.time,
+                        up_time: pointer_button_update.state.time,
                         count: 1,
-                        x: state.position.x,
-                        y: state.position.y,
+                        x: pointer_button_update.state.position.x,
+                        y: pointer_button_update.state.position.y,
                     };
                     self.taps.push(s);
-                    PointerEvent::Down {
-                        button,
-                        pointer,
-                        state: PointerState { count: 1, ..state },
-                    }
+                    PointerEvent::Down(PointerButtonUpdate {
+                        button: pointer_button_update.button,
+                        pointer: pointer_button_update.pointer,
+                        state: PointerState {
+                            count: 1,
+                            ..pointer_button_update.state
+                        },
+                    })
                 };
-                self.clear_expired(state.time);
+                self.clear_expired(pointer_button_update.state.time);
                 e
             }
-            PointerEvent::Up {
-                button,
-                pointer,
-                ref state,
-            } => {
-                if let Some(i) = self
-                    .taps
-                    .iter()
-                    .position(|TapState { pointer_id, .. }| *pointer_id == pointer.pointer_id)
-                {
-                    self.taps[i].up_time = state.time;
-                    PointerEvent::Up {
-                        button,
-                        pointer,
+            PointerEvent::Up(ref pointer_button_update) => {
+                if let Some(i) = self.taps.iter().position(|TapState { pointer_id, .. }| {
+                    *pointer_id == pointer_button_update.pointer.pointer_id
+                }) {
+                    self.taps[i].up_time = pointer_button_update.state.time;
+                    PointerEvent::Up(PointerButtonUpdate {
+                        button: pointer_button_update.button,
+                        pointer: pointer_button_update.pointer,
                         state: PointerState {
                             count: self.taps[i].count,
-                            ..state.clone()
+                            ..pointer_button_update.state.clone()
                         },
-                    }
+                    })
                 } else {
                     e.clone()
                 }

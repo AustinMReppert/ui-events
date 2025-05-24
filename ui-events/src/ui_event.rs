@@ -1,6 +1,9 @@
 use keyboard_types::KeyboardEvent;
 use crate::pointer::PointerEvent;
 
+/*#[cfg(feature = "std")]
+use std::time::Instant;*/
+
 /// Result of [`WindowEventReducer::reduce`].
 #[derive(Clone, Debug)]
 pub enum UiEvent {
@@ -9,3 +12,10 @@ pub enum UiEvent {
     /// Resulting [`PointerEvent`].
     Pointer(PointerEvent),
 }
+
+/*#[derive(Clone, Debug)]
+pub struct UiEvent {
+    // https://dom.spec.whatwg.org/#dom-event-timestamp
+    #[cfg(feature = "std")]
+    timestamp: Instant,
+}*/

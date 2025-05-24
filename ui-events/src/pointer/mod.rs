@@ -185,6 +185,36 @@ impl Default for PointerState {
     }
 }
 
+/// A pointer scroll update.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PointerScrollUpdate {
+    /// Identity of the pointer.
+    pub pointer: PointerInfo,
+    /// The delta of the scroll.
+    pub delta: ScrollDelta,
+    /// The state of the pointer (i.e. position, pressure, etc.).
+    pub state: PointerState,
+}
+
+/// A pointer button update.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PointerButtonUpdate {
+    /// The [`PointerButton`] that was updated.
+    pub button: Option<PointerButton>,
+    /// Identity of the pointer.
+    pub pointer: PointerInfo,
+    /// The state of the pointer (i.e. position, pressure, etc.).
+    pub state: PointerState,
+}
+
+impl PointerButtonUpdate {
+    /// Returns `true` if the underlying pointer is the primary pointer.
+    #[inline(always)]
+    pub fn is_primary_pointer(&self) -> bool {
+        self.pointer.is_primary_pointer()
+    }
+}
+
 /// A pointer update, along with coalesced and predicted states.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PointerUpdate {
@@ -223,23 +253,9 @@ impl PointerUpdate {
 #[derive(Clone, Debug)]
 pub enum PointerEvent {
     /// A [`PointerButton`] was pressed.
-    Down {
-        /// The [`PointerButton`] that was pressed..
-        button: Option<PointerButton>,
-        /// Identity of the pointer.
-        pointer: PointerInfo,
-        /// The state of the pointer (i.e. position, pressure, etc.).
-        state: PointerState,
-    },
+    Down(PointerButtonUpdate),
     /// A [`PointerButton`] was released.
-    Up {
-        /// The [`PointerButton`] that was released.
-        button: Option<PointerButton>,
-        /// Identity of the pointer.
-        pointer: PointerInfo,
-        /// The state of the pointer (i.e. position, pressure, etc.).
-        state: PointerState,
-    },
+    Up(PointerButtonUpdate),
     /// Pointer moved.
     Move(PointerUpdate),
     /// Pointer motion was cancelled.
@@ -254,14 +270,7 @@ pub enum PointerEvent {
     /// A scroll was requested at the pointer location.
     ///
     /// Usually this is caused by a mouse wheel or a touchpad.
-    Scroll {
-        /// Identity of the pointer.
-        pointer: PointerInfo,
-        /// The delta of the scroll.
-        delta: ScrollDelta,
-        /// The state of the pointer (i.e. position, pressure, etc.).
-        state: PointerState,
-    },
+    Scroll(PointerScrollUpdate),
 }
 
 impl PointerEvent {
@@ -269,13 +278,13 @@ impl PointerEvent {
     #[inline(always)]
     pub fn is_primary_pointer(&self) -> bool {
         match self {
-            Self::Down { pointer, .. }
-            | Self::Up { pointer, .. }
+            Self::Down(PointerButtonUpdate { pointer, .. })
+            | Self::Up(PointerButtonUpdate { pointer, .. })
             | Self::Move(PointerUpdate { pointer, .. })
             | Self::Cancel(pointer)
             | Self::Enter(pointer)
             | Self::Leave(pointer)
-            | Self::Scroll { pointer, .. } => pointer.is_primary_pointer(),
+            | Self::Scroll(PointerScrollUpdate { pointer, .. }) => pointer.is_primary_pointer(),
         }
     }
 }

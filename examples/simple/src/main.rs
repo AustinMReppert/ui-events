@@ -21,12 +21,12 @@ fn main() -> Result<(), impl std::error::Error> {
 
 use tracing::info;
 
+use ui_events::pointer::PointerEvent;
+use ui_events::UiEvent;
 use winit::application::ApplicationHandler;
 use winit::event::{StartCause, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::window::{Window, WindowAttributes, WindowId};
-use ui_events::pointer::PointerEvent;
-use ui_events::UiEvent;
 
 #[path = "util.rs"]
 mod util;
@@ -63,34 +63,42 @@ impl ApplicationHandler for Simple {
         info!("winit_event: {event:?}");
 
         match self.event_reducer.reduce(&event) {
-            Some(ui_event) => {
-                match ui_event {
-                    UiEvent::Keyboard(_) => {}
-                    UiEvent::Pointer(pointer_event) => {
-                        match pointer_event {
-                            PointerEvent::Down { .. } => {}
-                            PointerEvent::Up { .. } => {}
-                            PointerEvent::Move(_) => {}
-                            PointerEvent::Cancel(_) => {}
-                            PointerEvent::Enter(_) => {}
-                            PointerEvent::Leave(_) => {}
-                            PointerEvent::Scroll { .. } => {}
+            Some(ui_event) => match ui_event {
+                UiEvent::Keyboard(_) => {}
+                UiEvent::Pointer(pointer_event) => match pointer_event {
+                    PointerEvent::Down(pointer_button_update) => {
+                        if pointer_button_update.is_primary_pointer() {
+                            info!("Pointer down: {:?}", pointer_button_update);
                         }
                     }
-                }
-            }
+                    PointerEvent::Up(pointer_button_update) => {
+                        if pointer_button_update.is_primary_pointer() {
+                            info!("Pointer up: {:?}", pointer_button_update);
+                        }
+                    }
+                    PointerEvent::Move(pointer_update) => {
+                        info!("Pointer move: {:?}", pointer_update);
+                    }
+                    PointerEvent::Cancel(_) => {}
+                    PointerEvent::Enter(_) => {}
+                    PointerEvent::Leave(_) => {}
+                    PointerEvent::Scroll(pointer_scroll_update) => {
+                        info!("Pointer scroll: {:?}", pointer_scroll_update);
+                    }
+                },
+            },
             None => {}
         }
 
         match event {
             WindowEvent::CloseRequested => {
                 self.close_requested = true;
-            },
+            }
             WindowEvent::RedrawRequested => {
                 let window = self.window.as_ref().unwrap();
                 window.pre_present_notify();
                 //fill::fill_window(window.as_ref());
-            },
+            }
             _ => (),
         }
     }
