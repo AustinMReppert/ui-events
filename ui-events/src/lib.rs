@@ -36,5 +36,7 @@ pub mod keyboard;
 pub mod pointer;
 
 mod scroll;
+mod ui_event;
 
 pub use scroll::ScrollDelta;
+pub use ui_event::UiEvent;

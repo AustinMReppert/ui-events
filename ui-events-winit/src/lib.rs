@@ -29,11 +29,7 @@ use alloc::{vec, vec::Vec};
 extern crate std;
 use std::time::Instant;
 
-use ui_events::{
-    keyboard::KeyboardEvent,
-    pointer::{PointerEvent, PointerId, PointerInfo, PointerState, PointerType, PointerUpdate},
-    ScrollDelta,
-};
+use ui_events::{pointer::{PointerEvent, PointerId, PointerInfo, PointerState, PointerType, PointerUpdate}, ScrollDelta, UiEvent};
 use winit::{
     event::{ElementState, Force, MouseScrollDelta, Touch, TouchPhase, WindowEvent},
     keyboard::ModifiersState,
@@ -69,7 +65,7 @@ pub struct WindowEventReducer {
 #[allow(clippy::cast_possible_truncation)]
 impl WindowEventReducer {
     /// Process a [`WindowEvent`].
-    pub fn reduce(&mut self, we: &WindowEvent) -> Option<WindowEventTranslation> {
+    pub fn reduce(&mut self, we: &WindowEvent) -> Option<UiEvent> {
         const PRIMARY_MOUSE: PointerInfo = PointerInfo {
             pointer_id: Some(PointerId::PRIMARY),
             // TODO: Maybe transmute device.
@@ -89,19 +85,19 @@ impl WindowEventReducer {
                 self.primary_state.modifiers = keyboard::from_winit_modifier_state(self.modifiers);
                 None
             }
-            WindowEvent::KeyboardInput { event, .. } => Some(WindowEventTranslation::Keyboard(
+            WindowEvent::KeyboardInput { event, .. } => Some(UiEvent::Keyboard(
                 keyboard::from_winit_keyboard_event(event.clone(), self.modifiers),
             )),
-            WindowEvent::CursorEntered { .. } => Some(WindowEventTranslation::Pointer(
+            WindowEvent::CursorEntered { .. } => Some(UiEvent::Pointer(
                 PointerEvent::Enter(PRIMARY_MOUSE),
             )),
-            WindowEvent::CursorLeft { .. } => Some(WindowEventTranslation::Pointer(
+            WindowEvent::CursorLeft { .. } => Some(UiEvent::Pointer(
                 PointerEvent::Leave(PRIMARY_MOUSE),
             )),
             WindowEvent::CursorMoved { position, .. } => {
                 self.primary_state.position = *position;
 
-                Some(WindowEventTranslation::Pointer(self.counter.attach_count(
+                Some(UiEvent::Pointer(self.counter.attach_count(
                     PointerEvent::Move(PointerUpdate {
                         pointer: PRIMARY_MOUSE,
                         current: self.primary_state.clone(),
@@ -120,7 +116,7 @@ impl WindowEventReducer {
                     self.primary_state.buttons.insert(button);
                 }
 
-                Some(WindowEventTranslation::Pointer(self.counter.attach_count(
+                Some(UiEvent::Pointer(self.counter.attach_count(
                     PointerEvent::Down {
                         pointer: PRIMARY_MOUSE,
                         button,
@@ -138,7 +134,7 @@ impl WindowEventReducer {
                     self.primary_state.buttons.remove(button);
                 }
 
-                Some(WindowEventTranslation::Pointer(self.counter.attach_count(
+                Some(UiEvent::Pointer(self.counter.attach_count(
                     PointerEvent::Up {
                         pointer: PRIMARY_MOUSE,
                         button,
@@ -147,7 +143,7 @@ impl WindowEventReducer {
                 )))
             }
             WindowEvent::MouseWheel { delta, .. } => {
-                Some(WindowEventTranslation::Pointer(PointerEvent::Scroll {
+                Some(UiEvent::Pointer(PointerEvent::Scroll {
                     pointer: PRIMARY_MOUSE,
                     delta: match *delta {
                         MouseScrollDelta::LineDelta(x, y) => ScrollDelta::LineDelta(x, y),
@@ -187,7 +183,7 @@ impl WindowEventReducer {
                     ..Default::default()
                 };
 
-                Some(WindowEventTranslation::Pointer(self.counter.attach_count(
+                Some(UiEvent::Pointer(self.counter.attach_count(
                     match phase {
                         Started => PointerEvent::Down {
                             pointer,
@@ -212,15 +208,6 @@ impl WindowEventReducer {
             _ => None,
         }
     }
-}
-
-/// Result of [`WindowEventReducer::reduce`].
-#[derive(Debug)]
-pub enum WindowEventTranslation {
-    /// Resulting [`KeyboardEvent`].
-    Keyboard(KeyboardEvent),
-    /// Resulting [`PointerEvent`].
-    Pointer(PointerEvent),
 }
 
 #[derive(Clone, Debug)]

@@ -21,7 +21,7 @@ std = []
 
 [dependencies]
 ui-events = { workspace = true, features = ["std"] }
-winit = "0.30.10"
+winit = "0.30.11"
 
 [lints]
 workspace = true

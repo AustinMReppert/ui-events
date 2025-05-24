@@ -9,7 +9,11 @@ publish = false
 
 [dependencies]
 anyhow = "1.0.98"
-ui-events.workspace = true
+ui-events = {path = "../../ui-events"}
+ui-events-winit = { path = "../../ui-events-winit", default-features = false }
+winit = { version = "0.30.11"}
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 
 [lints]
 workspace = true
