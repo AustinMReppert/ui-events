@@ -48,9 +48,7 @@ impl ApplicationHandler for Simple {
     }
 
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        let window_attributes = WindowAttributes::default().with_title(
-            "Ui Events Winit Example",
-        );
+        let window_attributes = WindowAttributes::default().with_title("Ui Events Winit Example");
         let window = event_loop.create_window(window_attributes).unwrap();
         self.event_reducer.set_scale_factor(&window);
         self.window = Some(window);
@@ -65,32 +63,30 @@ impl ApplicationHandler for Simple {
         info!("winit_event: {event:?}");
 
         match self.event_reducer.reduce(&event) {
-            Some(ui_event) => match ui_event {
-                UiEvent::Keyboard(_) => {}
-                UiEvent::Pointer(pointer_event) => match pointer_event {
-                    PointerEvent::Down(pointer_button_update) => {
-                        if pointer_button_update.is_primary() {
-                            info!("Pointer down: {:?}", pointer_button_update);
-                            pointer_button_update.state.position;
-                        }
+            UiEvent::Keyboard(_) => {}
+            UiEvent::Pointer(pointer_event) => match pointer_event {
+                PointerEvent::Down(pointer_button_update) => {
+                    if pointer_button_update.is_primary() {
+                        info!("Pointer down: {:?}", pointer_button_update);
+                        pointer_button_update.state.position;
                     }
-                    PointerEvent::Up(pointer_button_update) => {
-                        if pointer_button_update.is_primary() {
-                            info!("Pointer up: {:?}", pointer_button_update);
-                        }
+                }
+                PointerEvent::Up(pointer_button_update) => {
+                    if pointer_button_update.is_primary() {
+                        info!("Pointer up: {:?}", pointer_button_update);
                     }
-                    PointerEvent::Move(pointer_update) => {
-                        info!("Pointer move: {:?}", pointer_update);
-                    }
-                    PointerEvent::Cancel(_) => {}
-                    PointerEvent::Enter(_) => {}
-                    PointerEvent::Leave(_) => {}
-                    PointerEvent::Scroll(pointer_scroll_update) => {
-                        info!("Pointer scroll: {:?}", pointer_scroll_update);
-                    }
-                },
+                }
+                PointerEvent::Move(pointer_update) => {
+                    info!("Pointer move: {:?}", pointer_update);
+                }
+                PointerEvent::Cancel(_) => {}
+                PointerEvent::Enter(_) => {}
+                PointerEvent::Leave(_) => {}
+                PointerEvent::Scroll(pointer_scroll_update) => {
+                    info!("Pointer scroll: {:?}", pointer_scroll_update);
+                }
             },
-            None => {}
+            UiEvent::Na => {}
         }
 
         match event {

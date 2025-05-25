@@ -11,6 +11,8 @@ pub enum UiEvent {
     Keyboard(KeyboardEvent),
     /// Resulting [`PointerEvent`].
     Pointer(PointerEvent),
+    /// Not relevant.
+    Na,
 }
 
 /*#[derive(Clone, Debug)]

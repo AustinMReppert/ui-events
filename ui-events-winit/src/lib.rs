@@ -30,15 +30,16 @@ extern crate std;
 use std::time::Instant;
 
 use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate};
+use ui_events::UiEvent::Na;
 use ui_events::{
     pointer::{PointerEvent, PointerId, PointerInfo, PointerState, PointerType, PointerUpdate},
     ScrollDelta, UiEvent,
 };
+use winit::window::Window;
 use winit::{
     event::{ElementState, Force, MouseScrollDelta, Touch, TouchPhase, WindowEvent},
     keyboard::ModifiersState,
 };
-use winit::window::Window;
 
 /// Manages stateful transformations of winit [`WindowEvent`].
 ///
@@ -72,7 +73,7 @@ pub struct WindowEventReducer {
 #[allow(clippy::cast_possible_truncation)]
 impl WindowEventReducer {
     /// Process a [`WindowEvent`].
-    pub fn reduce(&mut self, window_event: &WindowEvent) -> Option<UiEvent> {
+    pub fn reduce(&mut self, window_event: &WindowEvent) -> UiEvent {
         const PRIMARY_MOUSE: PointerInfo = PointerInfo {
             pointer_id: Some(PointerId::PRIMARY),
             // TODO: Maybe transmute device.
@@ -90,29 +91,25 @@ impl WindowEventReducer {
             WindowEvent::ModifiersChanged(m) => {
                 self.modifiers = m.state();
                 self.primary_state.modifiers = keyboard::from_winit_modifier_state(self.modifiers);
-                None
+                Na
             }
-            WindowEvent::KeyboardInput { event, .. } => Some(UiEvent::Keyboard(
+            WindowEvent::KeyboardInput { event, .. } => UiEvent::Keyboard(
                 keyboard::from_winit_keyboard_event(event.clone(), self.modifiers),
-            )),
+            ),
             WindowEvent::CursorEntered { .. } => {
-                Some(UiEvent::Pointer(PointerEvent::Enter(PRIMARY_MOUSE)))
+                UiEvent::Pointer(PointerEvent::Enter(PRIMARY_MOUSE))
             }
-            WindowEvent::CursorLeft { .. } => {
-                Some(UiEvent::Pointer(PointerEvent::Leave(PRIMARY_MOUSE)))
-            }
+            WindowEvent::CursorLeft { .. } => UiEvent::Pointer(PointerEvent::Leave(PRIMARY_MOUSE)),
             WindowEvent::CursorMoved { position, .. } => {
                 let logical = position.to_logical(self.scale_factor.unwrap_or(1.0));
                 self.primary_state.position = kurbo::Point::new(logical.x, logical.y);
 
-                Some(UiEvent::Pointer(self.counter.attach_count(
-                    PointerEvent::Move(PointerUpdate {
-                        pointer: PRIMARY_MOUSE,
-                        current: self.primary_state.clone(),
-                        coalesced: vec![],
-                        predicted: vec![],
-                    }),
-                )))
+                UiEvent::Pointer(self.counter.attach_count(PointerEvent::Move(PointerUpdate {
+                    pointer: PRIMARY_MOUSE,
+                    current: self.primary_state.clone(),
+                    coalesced: vec![],
+                    predicted: vec![],
+                })))
             }
             WindowEvent::MouseInput {
                 state: ElementState::Pressed,
@@ -124,12 +121,12 @@ impl WindowEventReducer {
                     self.primary_state.buttons.insert(button);
                 }
 
-                Some(UiEvent::Pointer(self.counter.attach_count(
-                    PointerEvent::Down(PointerButtonUpdate {
+                UiEvent::Pointer(self.counter.attach_count(PointerEvent::Down(
+                    PointerButtonUpdate {
                         pointer: PRIMARY_MOUSE,
                         button,
                         state: self.primary_state.clone(),
-                    }),
+                    },
                 )))
             }
             WindowEvent::MouseInput {
@@ -142,25 +139,28 @@ impl WindowEventReducer {
                     self.primary_state.buttons.remove(button);
                 }
 
-                Some(UiEvent::Pointer(self.counter.attach_count(
-                    PointerEvent::Up(PointerButtonUpdate {
-                        pointer: PRIMARY_MOUSE,
-                        button,
-                        state: self.primary_state.clone(),
-                    }),
-                )))
+                UiEvent::Pointer(
+                    self.counter
+                        .attach_count(PointerEvent::Up(PointerButtonUpdate {
+                            pointer: PRIMARY_MOUSE,
+                            button,
+                            state: self.primary_state.clone(),
+                        })),
+                )
             }
-            WindowEvent::MouseWheel { delta, .. } => Some(UiEvent::Pointer(PointerEvent::Scroll(PointerScrollUpdate {
-                pointer: PRIMARY_MOUSE,
-                delta: match *delta {
-                    MouseScrollDelta::LineDelta(x, y) => ScrollDelta::LineDelta(x, y),
-                    MouseScrollDelta::PixelDelta(p) => {
-                        let logical = p.to_logical(self.scale_factor.unwrap_or(1.0));
-                        ScrollDelta::PixelDelta(logical.x, logical.y)
+            WindowEvent::MouseWheel { delta, .. } => {
+                UiEvent::Pointer(PointerEvent::Scroll(PointerScrollUpdate {
+                    pointer: PRIMARY_MOUSE,
+                    delta: match *delta {
+                        MouseScrollDelta::LineDelta(x, y) => ScrollDelta::LineDelta(x, y),
+                        MouseScrollDelta::PixelDelta(p) => {
+                            let logical = p.to_logical(self.scale_factor.unwrap_or(1.0));
+                            ScrollDelta::PixelDelta(logical.x, logical.y)
+                        }
                     },
-                },
-                state: self.primary_state.clone(),
-            }))),
+                    state: self.primary_state.clone(),
+                }))
+            }
             WindowEvent::Touch(Touch {
                 phase,
                 id,
@@ -177,7 +177,7 @@ impl WindowEventReducer {
                 use TouchPhase::*;
 
                 let logical_location = location.to_logical(self.scale_factor.unwrap_or(1.0));
-                
+
                 let state = PointerState {
                     time,
                     position: kurbo::Point::new(logical_location.x, logical_location.y),
@@ -194,7 +194,7 @@ impl WindowEventReducer {
                     ..Default::default()
                 };
 
-                Some(UiEvent::Pointer(self.counter.attach_count(match phase {
+                UiEvent::Pointer(self.counter.attach_count(match phase {
                     Started => PointerEvent::Down(PointerButtonUpdate {
                         pointer,
                         button: None,
@@ -212,13 +212,13 @@ impl WindowEventReducer {
                         button: None,
                         state,
                     }),
-                })))
+                }))
             }
             WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
                 self.scale_factor = Some(*scale_factor);
-                None
-            },
-            _ => None,
+                Na
+            }
+            _ => Na,
         }
     }
 
