@@ -66,4 +66,4 @@ clippy.wildcard_dependencies = "warn"
 
 [workspace.dependencies]
 dpi = { version = "0.1.2", default-features = false }
-ui-events = { version = "0.1.0", path = "ui-events", default-features = false }
+kurbo = {version = "0.11.2", default-features = false}

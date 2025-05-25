@@ -49,9 +49,11 @@ impl ApplicationHandler for Simple {
 
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let window_attributes = WindowAttributes::default().with_title(
-            "Press 1, 2, 3 to change control flow mode. Press R to toggle redraw requests.",
+            "Ui Events Winit Example",
         );
-        self.window = Some(event_loop.create_window(window_attributes).unwrap());
+        let window = event_loop.create_window(window_attributes).unwrap();
+        self.event_reducer.set_scale_factor(&window);
+        self.window = Some(window);
     }
 
     fn window_event(
@@ -69,6 +71,7 @@ impl ApplicationHandler for Simple {
                     PointerEvent::Down(pointer_button_update) => {
                         if pointer_button_update.is_primary() {
                             info!("Pointer down: {:?}", pointer_button_update);
+                            pointer_button_update.state.position;
                         }
                     }
                     PointerEvent::Up(pointer_button_update) => {

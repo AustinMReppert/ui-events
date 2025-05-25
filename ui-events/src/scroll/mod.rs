@@ -3,8 +3,6 @@
 
 #![allow(missing_docs)]
 
-use dpi::PhysicalPosition;
-
 /// Scroll delta.
 ///
 /// Deltas are in a Y-down coordinate system, and represent a ‘navigation’
@@ -20,5 +18,5 @@ pub enum ScrollDelta {
 
     LineDelta(f32, f32),
 
-    PixelDelta(PhysicalPosition<f64>),
+    PixelDelta(f64, f64),
 }

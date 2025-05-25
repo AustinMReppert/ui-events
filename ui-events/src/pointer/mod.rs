@@ -3,16 +3,16 @@
 
 //! Pointer Event Types
 
+extern crate alloc;
 mod buttons;
 
 pub use buttons::{PointerButton, PointerButtons};
 
-extern crate alloc;
 use alloc::vec::Vec;
 
 use core::num::NonZeroU64;
 
-use dpi::{PhysicalPosition, PhysicalSize};
+use dpi::PhysicalSize;
 use keyboard_types::Modifiers;
 
 use crate::ScrollDelta;
@@ -137,7 +137,7 @@ pub struct PointerState {
     /// same device.
     pub time: u64,
     /// Position.
-    pub position: PhysicalPosition<f64>,
+    pub position: kurbo::Point,
     /// Pressed buttons.
     pub buttons: PointerButtons,
     /// Modifiers state.
@@ -169,7 +169,7 @@ impl Default for PointerState {
     fn default() -> Self {
         Self {
             time: 0,
-            position: PhysicalPosition::<f64>::default(),
+            position: kurbo::Point::default(),
             buttons: PointerButtons::default(),
             modifiers: Modifiers::default(),
             count: 0,

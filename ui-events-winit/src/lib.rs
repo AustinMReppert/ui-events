@@ -38,6 +38,7 @@ use winit::{
     event::{ElementState, Force, MouseScrollDelta, Touch, TouchPhase, WindowEvent},
     keyboard::ModifiersState,
 };
+use winit::window::Window;
 
 /// Manages stateful transformations of winit [`WindowEvent`].
 ///
@@ -64,12 +65,14 @@ pub struct WindowEventReducer {
     counter: TapCounter,
     /// First time an event was received..
     first_instant: Option<Instant>,
+    /// Scale factor.
+    scale_factor: Option<f64>,
 }
 
 #[allow(clippy::cast_possible_truncation)]
 impl WindowEventReducer {
     /// Process a [`WindowEvent`].
-    pub fn reduce(&mut self, we: &WindowEvent) -> Option<UiEvent> {
+    pub fn reduce(&mut self, window_event: &WindowEvent) -> Option<UiEvent> {
         const PRIMARY_MOUSE: PointerInfo = PointerInfo {
             pointer_id: Some(PointerId::PRIMARY),
             // TODO: Maybe transmute device.
@@ -83,7 +86,7 @@ impl WindowEventReducer {
 
         self.primary_state.time = time;
 
-        match we {
+        match window_event {
             WindowEvent::ModifiersChanged(m) => {
                 self.modifiers = m.state();
                 self.primary_state.modifiers = keyboard::from_winit_modifier_state(self.modifiers);
@@ -99,7 +102,8 @@ impl WindowEventReducer {
                 Some(UiEvent::Pointer(PointerEvent::Leave(PRIMARY_MOUSE)))
             }
             WindowEvent::CursorMoved { position, .. } => {
-                self.primary_state.position = *position;
+                let logical = position.to_logical(self.scale_factor.unwrap_or(1.0));
+                self.primary_state.position = kurbo::Point::new(logical.x, logical.y);
 
                 Some(UiEvent::Pointer(self.counter.attach_count(
                     PointerEvent::Move(PointerUpdate {
@@ -150,7 +154,10 @@ impl WindowEventReducer {
                 pointer: PRIMARY_MOUSE,
                 delta: match *delta {
                     MouseScrollDelta::LineDelta(x, y) => ScrollDelta::LineDelta(x, y),
-                    MouseScrollDelta::PixelDelta(p) => ScrollDelta::PixelDelta(p),
+                    MouseScrollDelta::PixelDelta(p) => {
+                        let logical = p.to_logical(self.scale_factor.unwrap_or(1.0));
+                        ScrollDelta::PixelDelta(logical.x, logical.y)
+                    },
                 },
                 state: self.primary_state.clone(),
             }))),
@@ -169,9 +176,11 @@ impl WindowEventReducer {
 
                 use TouchPhase::*;
 
+                let logical_location = location.to_logical(self.scale_factor.unwrap_or(1.0));
+                
                 let state = PointerState {
                     time,
-                    position: *location,
+                    position: kurbo::Point::new(logical_location.x, logical_location.y),
                     modifiers: self.primary_state.modifiers,
                     pressure: if matches!(phase, Ended | Cancelled) {
                         0.0
@@ -205,8 +214,17 @@ impl WindowEventReducer {
                     }),
                 })))
             }
+            WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
+                self.scale_factor = Some(*scale_factor);
+                None
+            },
             _ => None,
         }
+    }
+
+    /// Set the scale factor for the window.
+    pub fn set_scale_factor(&mut self, window: &Window) {
+        self.scale_factor = Some(window.scale_factor());
     }
 }
 

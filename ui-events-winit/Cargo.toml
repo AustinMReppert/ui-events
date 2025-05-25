@@ -20,8 +20,9 @@ default = ["std"]
 std = []
 
 [dependencies]
-ui-events = { workspace = true, features = ["std"] }
+ui-events = { path = "../ui-events", features = ["std"] }
 winit = "0.30.11"
+kurbo = {workspace = true}
 
 [lints]
 workspace = true
