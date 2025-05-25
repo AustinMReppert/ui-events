@@ -287,4 +287,19 @@ impl PointerEvent {
             | Self::Scroll(PointerScrollUpdate { pointer, .. }) => pointer.is_primary_pointer(),
         }
     }
+
+    /// Returns the position of the pointer event if available.
+    pub fn position(&self) -> Option<kurbo::Point> {
+        match self {
+            PointerEvent::Down(pointer_button_update) => Some(pointer_button_update.state.position),
+            PointerEvent::Up(pointer_button_update) => Some(pointer_button_update.state.position),
+            PointerEvent::Move(pointer_update) => Some(pointer_update.current.position),
+            PointerEvent::Cancel(_) => None,
+            PointerEvent::Enter(_) => None,
+            PointerEvent::Leave(_) => None,
+            PointerEvent::Scroll(pointer_scroll_update) => {
+                Some(pointer_scroll_update.state.position)
+            }
+        }
+    }
 }
