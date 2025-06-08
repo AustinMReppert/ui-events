@@ -27,7 +27,11 @@ extern crate alloc;
 use alloc::{vec, vec::Vec};
 
 extern crate std;
+
+#[cfg(not(target_arch = "wasm32"))]
 use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
 
 use ui_events::{
     keyboard::KeyboardEvent,

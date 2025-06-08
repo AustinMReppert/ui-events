@@ -8,8 +8,23 @@ repository.workspace = true
 publish = false
 
 [dependencies]
-anyhow = "1.0.98"
-ui-events.workspace = true
+ui-events = {path = "../../ui-events"}
+ui-events-winit = { path = "../../ui-events-winit", default-features = false }
+winit = { workspace = true }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.console_error_panic_hook]
+version = "0.1.7"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.tracing-web]
+version = "0.1.3"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
+version = "0.3.77"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.wasm-bindgen]
+version = "0.2.100"
 
 [lints]
 workspace = true
